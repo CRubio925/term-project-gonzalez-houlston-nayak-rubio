@@ -8,8 +8,8 @@ CSC 667 Term Project — Spring 2026
 |------|--------|-------|
 | Sparsh Nayak | SparshN26 | snayak2@sfsu.edu |
 | Foster Houlston | FosterHoulston | fhoulston@sfsu.edu |
-| Member 3 | @username | email@sfsu.edu |
-| Member 4 | @username | email@sfsu.edu |
+| J.J. Gonzalez | jago-j | jgonzalez63@sfsu.edu |
+| Christopher Rubio | CRubio925 | crubio4@sfsu.edu |
 
 ## Setup
 
