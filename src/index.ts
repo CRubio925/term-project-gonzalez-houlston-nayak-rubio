@@ -3,6 +3,7 @@ import path from "path"; //works with path files
 import { fileURLToPath } from "url";
 
 import homeRoutes from "./routes/home.js";
+import testRoute from "./routes/testRoute.js";
 import loggingMiddleware from "./middleware/logging.js";
 
 //create express app and set port
@@ -25,7 +26,10 @@ app.use(loggingMiddleware);
 
 //home route
 app.use("/", homeRoutes);
+app.use("/test", testRoute);
 
 app.listen(PORT, () => {
-  console.log(`Server is running at http://localhost:${String(PORT)} at ${new Date().toLocaleTimeString()}`);
+  console.log(
+    `Server is running at http://localhost:${String(PORT)} at ${new Date().toLocaleTimeString()}`,
+  );
 });
