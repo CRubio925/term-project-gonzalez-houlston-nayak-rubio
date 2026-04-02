@@ -1,14 +1,16 @@
 import express from "express"; //web server framework
 import path from "path"; //works with path files
 import { fileURLToPath } from "url";
-import dotenv from "dotenv";
-import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
+import session from "express-session";
+
+import dotenv from "dotenv";
 
 import homeRoutes from "./routes/home.js";
 import authRoutes from "./routes/auth.js";
 import testRoute from "./routes/testRoute.js";
 import loggingMiddleware from "./middleware/logging.js";
+import db from "./db/connection.js";
 import { requireAuth } from "./middleware/auth.js";
 
 dotenv.config();
@@ -28,6 +30,19 @@ app.use(express.urlencoded({ extended: true }));
 
 const PgSession = connectPgSimple(session);
 
+/***** NEW *******/
+app.use(
+  session({
+    store: new PgSession({ pgPromise: db }),
+    secret: process.env.SESSION_SECRET || "dev-secret",
+    resave: false,
+    httpOnly: true,
+    sameSite: "lax",
+    maxAge: 24 * 60 * 60 * 1000,
+  }),
+);
+/***** NEW *******/
+
 app.use(
   session({
     store: new PgSession({
@@ -43,7 +58,7 @@ app.use(
       secure: false,
       maxAge: 1000 * 60 * 60 * 24,
     },
-  })
+  }),
 );
 
 //look in public folder for static files (html, css, js)

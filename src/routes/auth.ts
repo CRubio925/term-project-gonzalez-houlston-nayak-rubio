@@ -1,9 +1,18 @@
 import { Router } from "express";
+import crypto from "crypto";
 import bcrypt from "bcrypt";
-import db from "../db/connection.js";
+
+import Users from "../db/users.js";
 
 const router = Router();
+
 const SALT_ROUNDS = 10;
+
+function gravatarUrl(email: string): string {
+  const hash = crypto.createHash("md5").update(email.trim().toLowerCase()).digest("hex");
+
+  return `https://www.gravatar.com/avatar/${hash}?d=identicon`;
+}
 
 //Post route /register to create new user
 router.post("/register", async (req, res) => {
@@ -12,41 +21,36 @@ router.post("/register", async (req, res) => {
   //check if email and password are sent
   try {
     if (!email || !password) {
-      return res.status(400).json({ error: "Email and password required" });
+      res.status(400).json({ error: "Email and password required" });
+      return;
     }
-    
+
+    if (password.length < 8) {
+      res.status(400).json({ error: "Password must be at least 8 characters" });
+      return;
+    }
+
     //chreck if user already exists with same email
-    const existingUser = await db.oneOrNone(
-      "SELECT id FROM users WHERE email = $1",
-      [email]
-    );
-
-    if (existingUser) {
-      return res.status(400).json({ error: "User already exists" });
+    if (await Users.existing(email)) {
+      res.status(409).json({ error: "Email already exists" });
+      return;
     }
-    
+
     //hash the password before storing in database
-    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+    const avatar = gravatarUrl(email);
 
-    //insert new user into database and return the created user
-    const user = await db.one(
-      `INSERT INTO users (email, password)
-       VALUES ($1, $2)
-       RETURNING id, email`,
-      [email, hashedPassword]
-    );
+    const user = await Users.create(email, passwordHash, avatar);
 
-    //store user info in session
-    req.session.user = {
-      id: user.id,
-      email: user.email,
-    };
+    req.session.user = user;
 
     //respond with success message and user info
-    res.status(201).json({ message: "Registration successful", user });
+    res.status(201).json({
+      ...user,
+    });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    console.error("Registration error: ", err);
+    res.status(500).json({ error: "Registration failed" });
   }
 });
 
@@ -54,37 +58,32 @@ router.post("/register", async (req, res) => {
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
+  if (!email || !password) {
+    res.status(400).json({ error: "Email and password required" });
+    return;
+  }
+
   try {
-    if (!email || !password) {
-      return res.status(400).json({ error: "Email and password required" });
+    const dBUser = await Users.findByEmail(email);
+    const isMatch = await bcrypt.compare(password, dBUser.password_hash);
+
+    if (!isMatch) {
+      throw new Error("Invalid credentials");
     }
 
-    //find user by email
-    const user = await db.oneOrNone(
-      "SELECT * FROM users WHERE email = $1",
-      [email]
-    );
-
-    if (!user) {
-      return res.status(401).json({ error: "Invalid email or password" });
-    }
-
-    const match = await bcrypt.compare(password, user.password);
-
-    if (!match) {
-      return res.status(401).json({ error: "Invalid email or password" });
-    }
-
-    //store user info in session
-    req.session.user = {
-      id: user.id,
-      email: user.email,
+    const user = {
+      id: dBUser.id,
+      email: dBUser.email,
+      gravatar_url: dBUser.gravatar_url,
+      created_at: dBUser.created_at,
     };
 
-    res.json({ message: "Login successful", user: req.session.user });
+    req.session.user = user;
+
+    res.json(user);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    console.error("Login error: ", err);
+    res.status(500).json({ error: "Invalid email or password" });
   }
 });
 
