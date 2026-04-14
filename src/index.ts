@@ -30,9 +30,13 @@ const PgSession = connectPgSimple(session);
 
 // Live reload — dev only
 if (process.env.NODE_ENV !== "production") {
-  const lrServer = livereload.createServer();
-  lrServer.watch([path.join(__dirname, "..", "public"), path.join(__dirname, "..", "views")]);
-  app.use(connectLivereload());
+  const lrServer = livereload.createServer({
+    delay: 200,
+    port: 35729,
+    exts: ["ejs", "html", "css", "js"],
+  });
+  lrServer.watch([path.join(process.cwd(), "public"), path.join(process.cwd(), "views")]);
+  app.use(connectLivereload({ port: 35729 }));
 }
 
 //functions that run before routes
