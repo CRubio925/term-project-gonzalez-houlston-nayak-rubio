@@ -1,5 +1,4 @@
 import { Router } from "express";
-import crypto from "crypto";
 import bcrypt from "bcrypt";
 import db from "../db/connection.js";
 import { requireAuth } from "../middleware/auth.js";
@@ -85,7 +84,7 @@ router.post("/register", async (req, res) => {
       email: email || "",
     });
     return;
-     /* res.status(400).json({ error: "Email and password required" });
+    /* res.status(400).json({ error: "Email and password required" });
       return;
     }
 
@@ -179,7 +178,7 @@ router.post("/login", async (req, res) => {
       email: email || "",
     });
     return;
-  /* if (!email || !password) {
+    /* if (!email || !password) {
     res.status(400).json({ error: "Email and password required" });
     return;
   }

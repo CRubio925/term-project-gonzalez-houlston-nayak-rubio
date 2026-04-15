@@ -1,0 +1,17 @@
+<%- include('partials/header', { title: 'Game', user }) %>
+
+<section class="box">
+  <h1>Game #<%= game.id %></h1>
+
+  <p>Status: <%= game.status %></p>
+  <p>Players: <%= game.players %></p>
+
+  <h3>Players in game:</h3>
+  <ul>
+    <% game.playerIds.forEach(function(playerId) { %>
+      <li>Player ID: <%= playerId %></li>
+    <% }) %>
+  </ul>
+
+  <a href="/auth/lobby">Back to Lobby</a>
+</section>

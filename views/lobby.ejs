@@ -1,12 +1,102 @@
 <%- include('partials/header', { title: 'Lobby', user }) %>
-  <section class="box">
-    <h1>Lobby</h1>
-    <p>Welcome, <strong><%= user.email %></strong>!</p>
-    <p>You're authenticated; this page is protected by middleware.</p>
-    <p>Session-based user ID: <%= user.id %></p>
 
-    <form method="POST" action="/auth/logout">
-        <button type="submit">Log out</button>
-    </form>
-  </section>
+<section class="box">
+  <h1>Lobby</h1>
 
+  <p>Welcome, <strong><%= user.email %></strong></p>
+
+  <h2>Games</h2>
+
+  <form method="POST" action="/games/create">
+    <button type="submit">Create Game</button>
+  </form>
+
+  <div id="games-list">Loading...</div>
+
+  <form method="POST" action="/auth/logout">
+    <button type="submit">Logout</button>
+  </form>
+</section>
+
+<script>
+  const currentUserId = <%- JSON.stringify(user.id) %>;
+  const gamesList = document.getElementById("games-list");
+
+  function renderGames(games) {
+    if (!games || games.length === 0) {
+      gamesList.innerHTML = "<p>No games yet.</p>";
+      return;
+    }
+
+    gamesList.innerHTML = games
+      .map((game) => {
+        const playerIds = Array.isArray(game.playerIds) ? game.playerIds : [];
+        const isInGame = playerIds.includes(currentUserId);
+        const isWaiting = game.status === "waiting";
+        const isFull = game.players >= 2;
+
+        let actionHtml = "";
+
+        if (isInGame) {
+          actionHtml = `<span style="margin-left: 8px;">You are in this game</span>`;
+        } else if (isWaiting && !isFull) {
+          actionHtml = `
+            <form method="POST" action="/games/${game.id}/join" style="display:inline; margin-left: 8px;">
+              <button type="submit">Join Game</button>
+            </form>
+          `;
+        } else if (isFull) {
+          actionHtml = `<span style="margin-left: 8px;">Game full</span>`;
+        } else {
+          actionHtml = `<span style="margin-left: 8px;">Unavailable</span>`;
+        }
+
+        return `
+          <div style="margin-bottom: 8px;">
+            Game #${game.id} hosted by ${game.hostEmail} - ${game.players} player(s) - ${game.status}
+            ${actionHtml}
+          </div>
+        `;
+      })
+      .join("");
+  }
+
+  async function loadGames() {
+    try {
+      const response = await fetch("/games");
+      const games = await response.json();
+      console.log("Loaded games:", games);
+      renderGames(games);
+    } catch (error) {
+      gamesList.innerHTML = "<p>Failed to load games.</p>";
+      console.error(error);
+    }
+  }
+
+  const eventSource = new EventSource("/api/sse");
+
+  eventSource.onmessage = function (event) {
+    const payload = JSON.parse(event.data);
+    console.log("SSE:", payload);
+
+    if (payload.type === "GAME_CREATED" || payload.type === "GAME_JOINED") {
+      loadGames();
+    }
+
+    // auto-redirect if your game starts
+    if (payload.type === "GAME_JOINED" && payload.games) {
+      const joinedGame = payload.games.find((game) =>
+        Array.isArray(game.playerIds) &&
+        game.playerIds.includes(currentUserId) &&
+        game.players === 2 &&
+        game.status === "started"
+      );
+
+      if (joinedGame) {
+        window.location.href = `/games/${joinedGame.id}`;
+      }
+    }
+  };
+
+  loadGames();
+</script>

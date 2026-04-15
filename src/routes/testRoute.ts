@@ -15,7 +15,7 @@ router.get("/", async (_request, response) => {
 
 router.post("/", async (request, response) => {
   try {
-    const { message } = request.body;
+    const { message } = request.body as { message?: string };
 
     if (!message) {
       return response.status(400).json({ error: "you need a message" });

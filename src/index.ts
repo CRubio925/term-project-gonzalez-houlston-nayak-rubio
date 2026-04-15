@@ -6,13 +6,12 @@ import dotenv from "dotenv";
 import connectPgSimple from "connect-pg-simple";
 import session from "express-session";
 
-import dotenv from "dotenv";
-
+import gamesRoutes from "./routes/games.js";
 import homeRoutes from "./routes/home.js";
 import authRoutes from "./routes/auth.js";
 import testRoute from "./routes/testRoute.js";
 import loggingMiddleware from "./middleware/logging.js";
-import db from "./db/connection.js";
+import sseRoutes from "./routes/sse.js";
 import { requireAuth } from "./middleware/auth.js";
 
 dotenv.config();
@@ -30,7 +29,6 @@ const __dirname = path.dirname(__filename);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
 const PgSession = connectPgSimple(session);
 
 /* //configure session middleware to use PostgreSQL for session storage
@@ -52,12 +50,13 @@ const sessionOptions: SessionOptions = {
 };
 
 app.use(session(sessionOptions));
+*/
 
-// configure EJS view engine
 app.set("views", path.join(__dirname, "..", "views"));
-app.set("view engine", "ejs"); */ // recheck this
+app.set("view engine", "ejs");
+
 /***** NEW *******/
-app.use(
+/* app.use(
   session({
     store: new PgSession({ pgPromise: db }),
     secret: process.env.SESSION_SECRET || "dev-secret",
@@ -92,12 +91,18 @@ app.use(express.static(path.join(__dirname, "..", "public")));
 
 app.use(loggingMiddleware);
 
+app.get("/ping", (_req, res) => {
+  res.send("server is using this file");
+});
+
 //home route
 app.use("/", homeRoutes);
 app.use("/test", testRoute);
 
 //auth routes
 app.use("/auth", authRoutes);
+app.use("/api/sse", sseRoutes);
+app.use("/games", gamesRoutes);
 
 //protected route
 app.get("/protected", requireAuth, (req, res) => {
